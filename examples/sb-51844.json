@@ -1,0 +1,101 @@
+{
+ "title": "spring-boot #51844 · Caffeine 异步缓存模式开关",
+ "files": [
+  {
+   "id": "G001",
+   "path": "/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CacheProperties.java",
+   "line": 122,
+   "kind": "added",
+   "description": "Caffeine 子配置新增 cacheMode，默认 NATIVE",
+   "changed": true
+  },
+  {
+   "id": "G002",
+   "path": "/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CacheProperties.java",
+   "line": 146,
+   "kind": "added",
+   "description": "CacheMode 枚举：NATIVE 使用 Cache，ASYNC 使用 AsyncCache 以支持 Cache.retrieve",
+   "changed": true
+  },
+  {
+   "id": "G003",
+   "path": "/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CaffeineCacheConfiguration.java",
+   "line": 65,
+   "kind": "updated",
+   "description": "createCacheManager 读取 cacheMode，ASYNC 时开启 CaffeineCacheManager 的异步模式",
+   "changed": true
+  },
+  {
+   "id": "G004",
+   "path": "/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CaffeineCacheConfiguration.java",
+   "line": 61,
+   "kind": "original",
+   "description": "创建并配置 CaffeineCacheManager 的原有入口",
+   "changed": false
+  },
+  {
+   "id": "G005",
+   "path": "/path/to/sb2/module/spring-boot-cache/src/test/java/org/springframework/boot/cache/autoconfigure/CacheAutoConfigurationTests.java",
+   "line": 830,
+   "kind": "added",
+   "description": "验证 cache-mode=async 时底层可取得 AsyncCache，默认模式下 getAsyncCache 抛异常",
+   "changed": true
+  },
+  {
+   "id": "G006",
+   "path": "/path/to/sb2/documentation/spring-boot-docs/src/docs/antora/modules/reference/pages/io/caching.adoc",
+   "line": 226,
+   "kind": "updated",
+   "description": "参考文档说明何时需要异步缓存及两种配置方式",
+   "changed": true
+  }
+ ],
+ "chains": [
+  {
+   "id": "caffeine-async",
+   "title": "Caffeine 缓存管理器按配置创建异步或原生缓存",
+   "description": "Spring 的 Cache#retrieve 需要底层是 Caffeine AsyncCache，而自动配置原先只能创建原生缓存，用户得写 CacheManagerCustomizer。此次增加 spring.cache.caffeine.cache-mode，设为 async 后，按名称配置的缓存和按需创建的缓存都会走异步模式；默认 native 不改变现有行为。",
+   "participants": [
+    "Spring 容器",
+    "CaffeineCacheConfiguration",
+    "CacheProperties",
+    "CaffeineCacheManager"
+   ],
+   "steps": [
+    {
+     "from": "Spring 容器",
+     "to": "CaffeineCacheConfiguration",
+     "kind": "original",
+     "method": "cacheManager",
+     "description": "装配 CaffeineCacheManager Bean，随后应用 cacheNames 与定制器。",
+     "file": "G004",
+     "line": 49
+    },
+    {
+     "from": "CaffeineCacheConfiguration",
+     "to": "CacheProperties",
+     "kind": "updated",
+     "method": "getCaffeine().getCacheMode",
+     "description": "读取新增的 cacheMode；未配置时为 NATIVE。",
+     "file": "G001",
+     "line": 122
+    },
+    {
+     "from": "CaffeineCacheConfiguration",
+     "to": "CaffeineCacheManager",
+     "kind": "updated",
+     "method": "setAsyncCacheMode(true)",
+     "description": "仅当模式为 ASYNC 时开启，之后 spec / Caffeine / CacheLoader 的设置沿用原逻辑。",
+     "file": "G003",
+     "line": 67,
+     "condition": "cache-mode = ASYNC"
+    }
+   ],
+   "files": [
+    "G002",
+    "G005",
+    "G006"
+   ]
+  }
+ ]
+}

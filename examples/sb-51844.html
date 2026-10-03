@@ -1,0 +1,134 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>spring-boot #51844 · Caffeine 异步缓存模式开关</title><style>:root{--bg:#f6f7f9;--surface:#fff;--ink:#1b2433;--muted:#667085;--line:#e4e7ec;--accent:#4f46e5;--accent-soft:#eef2ff;--side:#fff;--side-hover:#f2f4f7;
+--added:#12805c;--added-bg:#e6f6ee;--updated:#2f5fd0;--updated-bg:#e8effd;--deleted:#c0392b;--deleted-bg:#fdeceb;--original:#667085;--original-bg:#eef0f3;
+--cond-bg:#fff7e6;--cond-bar:#f0a020;--life:#d0d5dd;--actor-bg:#f2f4ff;--actor-line:#c7cdf5;--shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.04)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1420;--surface:#171e2d;--ink:#e6eaf2;--muted:#8d98ad;--line:#273046;--accent:#8b93ff;--accent-soft:#222a4a;--side:#131a28;--side-hover:#1d2638;
+--added:#4cd3a0;--added-bg:#12372b;--updated:#8fb0ff;--updated-bg:#1c2b52;--deleted:#ff8c80;--deleted-bg:#44201f;--original:#9aa5b8;--original-bg:#262e40;
+--cond-bg:#3a2f16;--life:#344058;--actor-bg:#1f2747;--actor-line:#3b4678;--shadow:0 1px 2px rgba(0,0,0,.3)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.65 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+aside{position:fixed;width:272px;inset:0 auto 0 0;padding:64px 14px 20px;overflow:auto;background:var(--side);border-right:1px solid var(--line);transition:width .2s}
+aside h2{margin:0 8px 6px;font-size:15px;font-weight:650;letter-spacing:.01em}
+main{margin-left:272px;padding:28px 32px 64px;min-width:0;transition:margin-left .2s}
+.sidebar-toggle{position:fixed;left:14px;top:14px;z-index:20;height:34px;padding:0 12px;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);cursor:pointer}
+.nav-list{list-style:none;padding:0;margin:14px 0}.nav-list li{margin:2px 0}
+.nav-list a{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:8px;text-decoration:none;color:var(--muted);border-left:3px solid transparent;transition:background .12s,color .12s}
+.nav-list a:hover{background:var(--side-hover);color:var(--ink);text-decoration:none}
+.nav-list a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)}
+.nav-number{flex:0 0 24px;font:600 12px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.75}.nav-label{line-height:1.5;font-weight:500}
+.sidebar-collapsed aside{width:72px;padding:64px 8px 12px}.sidebar-collapsed aside>h2,.sidebar-collapsed .nav-label{display:none}.sidebar-collapsed main{margin-left:72px}.sidebar-collapsed .nav-list a{justify-content:center;padding:9px 4px}
+.chain{background:var(--surface);padding:6px 24px 22px;margin-bottom:24px;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);scroll-margin-top:16px}
+summary{cursor:pointer;font-weight:650;font-size:17px;padding:16px 0;list-style:none;display:flex;align-items:center;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+details[open]>summary::after{transform:rotate(225deg)}
+.idx{font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:6px}
+.chain-description{margin:0 0 14px;color:var(--muted);line-height:1.8;max-width:78ch}
+.toolbar{display:flex;align-items:center;gap:8px;padding:0 0 12px}
+.toolbar .meta{margin-left:auto;color:var(--muted);font-size:12px}
+button{height:30px;padding:0 12px;font:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;transition:background .12s,border-color .12s}
+button:hover{background:var(--side-hover);border-color:var(--life)}
+.canvas{overflow:auto;max-height:85vh;border:1px solid var(--line);border-radius:12px;background:var(--bg);background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px}
+.canvas svg{display:block;max-width:none!important;font-size:14px;font-family:inherit}
+.canvas svg text{fill:var(--ink)}
+.life{stroke:var(--life);stroke-width:1.5;stroke-dasharray:4 6}
+.actor rect{fill:var(--actor-bg);stroke:var(--actor-line);stroke-width:1.2}
+.actor text{font-weight:650;font-size:14px}
+.msg{fill:none;stroke:var(--muted);stroke-width:1.6;stroke-linejoin:round}.msg.async{stroke-dasharray:6 5}
+.arrow-head{fill:var(--muted)}
+.canvas svg .desc{fill:var(--muted);font-size:13px}
+.num{fill:var(--accent)}.canvas svg .num-t{fill:#fff;font:700 11px ui-monospace,Menlo,monospace}
+.badge.original{fill:var(--original-bg)}.badge.added{fill:var(--added-bg)}.badge.updated{fill:var(--updated-bg)}.badge.deleted{fill:var(--deleted-bg)}
+.canvas svg .badge-t{font-size:12px;font-weight:650}
+.canvas svg .badge-t.original{fill:var(--original)}.canvas svg .badge-t.added{fill:var(--added)}.canvas svg .badge-t.updated{fill:var(--updated)}.canvas svg .badge-t.deleted{fill:var(--deleted)}
+.canvas svg .code-link{fill:var(--accent);font:600 14px ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer;text-decoration:none}
+.canvas svg .code-link:hover{text-decoration:underline}
+.cond-box{fill:none;stroke:var(--cond-bar);stroke-width:1.2;stroke-dasharray:5 4;opacity:.85}.cond-tab{fill:var(--cond-bar)}.canvas svg .cond text{font-size:12.5px;font-weight:600;fill:#4a3300}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.diagram-files{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.diagram-files>summary{font-size:13px;font-weight:600;padding:11px 14px;background:var(--bg);color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:11px 14px;border-top:1px solid var(--line);vertical-align:top}
+tr:hover td{background:var(--bg)}
+td.fid{font:12px ui-monospace,Menlo,monospace;color:var(--muted);white-space:nowrap}
+small{display:block;overflow-wrap:anywhere;color:var(--muted);font-size:12px;margin-top:2px}
+.tag{display:inline-block;margin-right:8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.tag.original{color:var(--original);background:var(--original-bg)}.tag.added{color:var(--added);background:var(--added-bg)}.tag.updated{color:var(--updated);background:var(--updated-bg)}.tag.deleted{color:var(--deleted);background:var(--deleted-bg)}
+@media(max-width:800px){aside{position:static;width:auto;padding-top:60px;border:0}main{margin:0;padding:12px}.sidebar-collapsed aside{position:fixed;height:100vh}.sidebar-collapsed main{margin-left:72px}.chain{padding:2px 14px 16px}}
+</style><button class="sidebar-toggle" aria-expanded="true" aria-label="展开或收起目录">收起目录</button><aside><h2>spring-boot #51844 · Caffeine 异步缓存模式开关</h2><ol class="nav-list"><li><a href="#chain-caffeine-async"><span class="nav-number">01</span><span class="nav-label">Caffeine 缓存管理器按配置创建异步或原生缓存</span></a></li></ol></aside><main><details class="chain" id="chain-caffeine-async" open><summary><span class="idx">01</span>Caffeine 缓存管理器按配置创建异步或原生缓存</summary><p class="chain-description">Spring 的 Cache#retrieve 需要底层是 Caffeine AsyncCache，而自动配置原先只能创建原生缓存，用户得写 CacheManagerCustomizer。此次增加 spring.cache.caffeine.cache-mode，设为 async 后，按名称配置的缓存和按需创建的缓存都会走异步模式；默认 native 不改变现有行为。</p><div class="toolbar"><button onclick="fit(this)">适应宽度</button><button onclick="zoom(this,.15)" aria-label="放大">＋</button><button onclick="zoom(this,-.15)" aria-label="缩小">－</button><span class="meta">3 步 · 6 个文件</span></div><div class="canvas"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 576" role="img" aria-label="Caffeine 缓存管理器按配置创建异步或原生缓存"><defs><marker id="arrow-caffeine-async" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto"><path class="arrow-head" d="M1,1 L10,5 L1,9 z"/></marker></defs><line class="life" x1="120.0" y1="64" x2="120.0" y2="560"/><g class="actor"><rect x="45.0" y="20" width="150" height="44" rx="10"/><text x="120.0" y="47" text-anchor="middle">Spring 容器</text></g><line class="life" x1="410.3333333333333" y1="64" x2="410.3333333333333" y2="560"/><g class="actor"><rect x="279.8333333333333" y="20" width="261.0" height="44" rx="10"/><text x="410.3333333333333" y="47" text-anchor="middle">CaffeineCacheConfiguration</text></g><line class="life" x1="700.6666666666666" y1="64" x2="700.6666666666666" y2="560"/><g class="actor"><rect x="616.9166666666666" y="20" width="167.5" height="44" rx="10"/><text x="700.6666666666666" y="47" text-anchor="middle">CacheProperties</text></g><line class="life" x1="991.0" y1="64" x2="991.0" y2="560"/><g class="actor"><rect x="886.0" y="20" width="210.0" height="44" rx="10"/><text x="991.0" y="47" text-anchor="middle">CaffeineCacheManager</text></g><g class="step"><circle class="num" cx="28" cy="115" r="11"/><text class="num-t" x="28" y="119" text-anchor="middle">1</text><rect class="badge original" x="191.9666666666666" y="101" width="40" height="24" rx="12"/><text class="badge-t original" x="211.9666666666666" y="117" text-anchor="middle">原有</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCaffeineCacheConfiguration.java&amp;line=49"><text class="code-link" x="239.9666666666666" y="118">cacheManager</text></a><text class="desc" x="265.16666666666663" y="144" text-anchor="middle">装配 CaffeineCacheManager Bean，</text><text class="desc" x="265.16666666666663" y="165" text-anchor="middle">随后应用 cacheNames 与定制器。</text><path class="msg" d="M 120.0 200 H 410.3333333333333" marker-end="url(#arrow-caffeine-async)"/></g><g class="step"><circle class="num" cx="28" cy="257" r="11"/><text class="num-t" x="28" y="261" text-anchor="middle">2</text><rect class="badge updated" x="424.90000000000003" y="243" width="40" height="24" rx="12"/><text class="badge-t updated" x="444.90000000000003" y="259" text-anchor="middle">更新</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCacheProperties.java&amp;line=122"><text class="code-link" x="472.90000000000003" y="260">getCaffeine().getCacheMode</text></a><text class="desc" x="555.5" y="286" text-anchor="middle">读取新增的 cacheMode；未配置时为</text><text class="desc" x="555.5" y="307" text-anchor="middle">NATIVE。</text><path class="msg" d="M 410.3333333333333 342 H 700.6666666666666" marker-end="url(#arrow-caffeine-async)"/></g><g class="cond"><rect class="cond-box" x="354.3333333333333" y="386" width="692.6666666666667" height="150" rx="10"/><rect class="cond-tab" x="366.3333333333333" y="376" width="216.99999999999994" height="22" rx="6"/><text x="377.3333333333333" y="391">条件  cache-mode = ASYNC</text></g><g class="step"><circle class="num" cx="28" cy="429" r="11"/><text class="num-t" x="28" y="433" text-anchor="middle">3</text><rect class="badge updated" x="582.3666666666667" y="415" width="40" height="24" rx="12"/><text class="badge-t updated" x="602.3666666666667" y="431" text-anchor="middle">更新</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCaffeineCacheConfiguration.java&amp;line=67"><text class="code-link" x="630.3666666666667" y="432">setAsyncCacheMode(true)</text></a><text class="desc" x="700.6666666666666" y="458" text-anchor="middle">仅当模式为 ASYNC 时开启，之后 spec / Caffeine / CacheLoader 的设置沿用原</text><text class="desc" x="700.6666666666666" y="479" text-anchor="middle">逻辑。</text><path class="msg" d="M 410.3333333333333 514 H 991.0" marker-end="url(#arrow-caffeine-async)"/></g></svg></div><details class="diagram-files"><summary>本图全部文件（6）</summary><table><tr><td class="fid">G004</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCaffeineCacheConfiguration.java&amp;line=61">CaffeineCacheConfiguration.java:61</a><small>/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CaffeineCacheConfiguration.java</small></td><td><span class="tag original">原有</span>创建并配置 CaffeineCacheManager 的原有入口</td></tr><tr><td class="fid">G001</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCacheProperties.java&amp;line=122">CacheProperties.java:122</a><small>/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CacheProperties.java</small></td><td><span class="tag added">新增</span>Caffeine 子配置新增 cacheMode，默认 NATIVE</td></tr><tr><td class="fid">G003</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCaffeineCacheConfiguration.java&amp;line=65">CaffeineCacheConfiguration.java:65</a><small>/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CaffeineCacheConfiguration.java</small></td><td><span class="tag updated">更新</span>createCacheManager 读取 cacheMode，ASYNC 时开启 CaffeineCacheManager 的异步模式</td></tr><tr><td class="fid">G002</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCacheProperties.java&amp;line=146">CacheProperties.java:146</a><small>/path/to/sb2/module/spring-boot-cache/src/main/java/org/springframework/boot/cache/autoconfigure/CacheProperties.java</small></td><td><span class="tag added">新增</span>CacheMode 枚举：NATIVE 使用 Cache，ASYNC 使用 AsyncCache 以支持 Cache.retrieve</td></tr><tr><td class="fid">G005</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fmodule%2Fspring-boot-cache%2Fsrc%2Ftest%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcache%2Fautoconfigure%2FCacheAutoConfigurationTests.java&amp;line=830">CacheAutoConfigurationTests.java:830</a><small>/path/to/sb2/module/spring-boot-cache/src/test/java/org/springframework/boot/cache/autoconfigure/CacheAutoConfigurationTests.java</small></td><td><span class="tag added">新增</span>验证 cache-mode=async 时底层可取得 AsyncCache，默认模式下 getAsyncCache 抛异常</td></tr><tr><td class="fid">G006</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb2%2Fdocumentation%2Fspring-boot-docs%2Fsrc%2Fdocs%2Fantora%2Fmodules%2Freference%2Fpages%2Fio%2Fcaching.adoc&amp;line=226">caching.adoc:226</a><small>/path/to/sb2/documentation/spring-boot-docs/src/docs/antora/modules/reference/pages/io/caching.adoc</small></td><td><span class="tag updated">更新</span>参考文档说明何时需要异步缓存及两种配置方式</td></tr></table></details></details></main><script>function sizeDiagram(canvas, scale) {
+  const svg = canvas.querySelector('svg');
+  const box = svg.viewBox.baseVal;
+  svg.dataset.scale = scale;
+  svg.style.width = `${box.width * scale}px`;
+  svg.style.height = `${box.height * scale}px`;
+}
+function fitCanvas(canvas) {
+  if (!canvas.clientWidth) return;
+  canvas.dataset.fit = 'true';
+  sizeDiagram(canvas, canvas.clientWidth / canvas.querySelector('svg').viewBox.baseVal.width);
+}
+function fit(button) { fitCanvas(button.closest('.chain').querySelector('.canvas')); }
+function zoom(button, delta) {
+  const canvas = button.closest('.chain').querySelector('.canvas');
+  canvas.dataset.fit = 'false';
+  sizeDiagram(canvas, Math.max(.05, Math.min(4, Number(canvas.querySelector('svg').dataset.scale || 1) + delta)));
+}
+function filterFiles(query) {
+  document.querySelectorAll('#inventory tr[data-file]').forEach(row => row.hidden = !row.dataset.file.includes(query.toLowerCase()));
+}
+document.querySelectorAll('.canvas').forEach(canvas => {
+  canvas.style.cursor = 'grab';
+  let drag = null, suppressClick = false;
+  canvas.addEventListener('pointerdown', event => {
+    suppressClick = false;
+    // 代码链接交由浏览器处理，不能捕获其指针，否则IDEA跳转会被拖动逻辑吞掉。
+    if (event.target.closest('a, button, input, select, textarea')) return;
+    if (event.button !== 0 || event.pointerType === 'touch') return;
+    drag = {id:event.pointerId, x:event.clientX, y:event.clientY, left:canvas.scrollLeft, top:canvas.scrollTop, moved:false};
+  });
+  canvas.addEventListener('pointermove', event => {
+    if (!drag) return;
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+    drag.moved = true;
+    canvas.setPointerCapture(event.pointerId);
+    canvas.style.cursor = 'grabbing';
+    event.preventDefault();
+    canvas.scrollLeft = drag.left - dx;
+    canvas.scrollTop = drag.top - dy;
+  });
+  const stop = () => {
+    if (!drag) return;
+    suppressClick = drag.moved;
+    if (canvas.hasPointerCapture(drag.id)) canvas.releasePointerCapture(drag.id);
+    drag = null;
+    canvas.style.cursor = 'grab';
+  };
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointercancel', stop);
+  canvas.addEventListener('pointerleave', () => { if (drag && !drag.moved) stop(); });
+  canvas.addEventListener('dragstart', event => event.preventDefault());
+  canvas.addEventListener('click', event => {
+    if (event.target.closest('a')) { suppressClick = false; return; }
+    if (suppressClick) { event.preventDefault(); event.stopPropagation(); suppressClick = false; }
+  }, true);
+  canvas.style.userSelect = 'none';
+  canvas.dataset.fit = 'true';
+  new ResizeObserver(() => { if (canvas.dataset.fit === 'true') fitCanvas(canvas); }).observe(canvas);
+  canvas.closest('.chain').addEventListener('toggle', () => {
+    if (canvas.dataset.fit === 'true') requestAnimationFrame(() => fitCanvas(canvas));
+  });
+  fitCanvas(canvas);
+});
+
+const sidebarToggle = document.querySelector('.sidebar-toggle');
+if (sidebarToggle) sidebarToggle.onclick = () => {
+  const collapsed = document.body.classList.toggle('sidebar-collapsed');
+  sidebarToggle.textContent = collapsed ? '☰' : '收起目录';
+  sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+};
+document.querySelectorAll('.nav-list a').forEach(a => a.addEventListener('click', () => {
+  const target = document.getElementById(a.getAttribute('href').slice(1));
+  if (target) target.open = true;
+  document.querySelectorAll('.nav-list a').forEach(link => link.classList.toggle('active', link === a));
+}));
+</script></html>

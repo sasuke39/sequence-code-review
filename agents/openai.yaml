@@ -1,0 +1,4 @@
+interface:
+  display_name: "时序图代码审查"
+  short_description: "按业务链路展示 Git 改动，支持 IDEA 行跳转与逐文件覆盖核验"
+  default_prompt: "使用 $sequence-code-review，把本次需求的全部 Git 改动整理成可点击代码的业务时序图审查包，并核验是否有遗漏。"

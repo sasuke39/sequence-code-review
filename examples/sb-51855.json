@@ -1,0 +1,131 @@
+{
+ "title": "spring-boot #51855 · 属性迁移器可让应用启动失败",
+ "files": [
+  {
+   "id": "F001",
+   "path": "/path/to/sb/core/spring-boot-properties-migrator/src/main/java/org/springframework/boot/context/properties/migrator/PropertiesMigrationListener.java",
+   "line": 116,
+   "kind": "added",
+   "description": "新增 Fail 枚举（NEVER / ON_ERROR / ON_WARNING），每个取值带一个判断迁移报告是否算失败的谓词，check() 失败时抛 IllegalStateException",
+   "changed": true
+  },
+  {
+   "id": "F002",
+   "path": "/path/to/sb/core/spring-boot-properties-migrator/src/main/java/org/springframework/boot/context/properties/migrator/PropertiesMigrationListener.java",
+   "line": 69,
+   "kind": "updated",
+   "description": "准备阶段绑定 spring.properties.migrator.fail，生成报告后立即按策略校验",
+   "changed": true
+  },
+  {
+   "id": "F003",
+   "path": "/path/to/sb/core/spring-boot-properties-migrator/src/main/resources/META-INF/spring-configuration-metadata.json",
+   "line": 3,
+   "kind": "added",
+   "description": "为新属性补充元数据，使 IDE 提示与 configprop 文档引用可用",
+   "changed": true
+  },
+  {
+   "id": "F004",
+   "path": "/path/to/sb/buildSrc/src/main/java/org/springframework/boot/build/context/properties/DocumentConfigurationProperties.java",
+   "line": 109,
+   "kind": "updated",
+   "description": "把 spring.properties 前缀加入配置属性文档生成",
+   "changed": true
+  },
+  {
+   "id": "F005",
+   "path": "/path/to/sb/documentation/spring-boot-docs/src/docs/antora/modules/ROOT/pages/upgrading.adoc",
+   "line": 52,
+   "kind": "updated",
+   "description": "升级指南说明该属性的三种取值",
+   "changed": true
+  },
+  {
+   "id": "F006",
+   "path": "/path/to/sb/core/spring-boot-properties-migrator/src/test/java/org/springframework/boot/context/properties/migrator/PropertiesMigrationListenerTests.java",
+   "line": 62,
+   "kind": "updated",
+   "description": "覆盖 never / on-error / on-warning 在改名键与不支持键下的启停行为",
+   "changed": true
+  },
+  {
+   "id": "F007",
+   "path": "/path/to/sb/core/spring-boot-properties-migrator/build.gradle",
+   "line": 40,
+   "kind": "updated",
+   "description": "测试源码开启空值检查（nullability tests）",
+   "changed": true
+  }
+ ],
+ "chains": [
+  {
+   "id": "fail-startup",
+   "title": "启动时按策略决定是否因待迁移配置而失败",
+   "description": "应用升级后若配置里仍有旧键，原来只在启动完成后打印一份报告。此次在 ApplicationPreparedEvent 阶段读取 spring.properties.migrator.fail，生成迁移报告后立即校验，让团队可以在 CI 或预发中把「存在旧键」直接变成启动失败，默认 never 保持原有行为。",
+   "participants": [
+    "SpringApplication",
+    "PropertiesMigrationListener",
+    "Binder",
+    "Fail 策略"
+   ],
+   "steps": [
+    {
+     "from": "SpringApplication",
+     "to": "PropertiesMigrationListener",
+     "kind": "original",
+     "method": "onApplicationEvent",
+     "description": "Environment 准备完毕后发布 ApplicationPreparedEvent，监听器收到后进入迁移检查。",
+     "file": "F002",
+     "line": 60
+    },
+    {
+     "from": "PropertiesMigrationListener",
+     "to": "Binder",
+     "kind": "updated",
+     "method": "bind(spring.properties.migrator.fail)",
+     "description": "从 Environment 绑定失败策略；未配置时回落到 NEVER，因此老用户无感知。",
+     "file": "F002",
+     "line": 71
+    },
+    {
+     "from": "PropertiesMigrationListener",
+     "to": "PropertiesMigrationListener",
+     "kind": "updated",
+     "method": "getReport",
+     "description": "先加载 spring-configuration-metadata.json，再生成包含告警（改名键）和错误（不支持键）的报告并保存，用于之后失败时仍能打印。",
+     "file": "F002",
+     "line": 72
+    },
+    {
+     "from": "PropertiesMigrationListener",
+     "to": "Fail 策略",
+     "kind": "added",
+     "method": "check",
+     "description": "NEVER 恒通过；ON_ERROR 在存在错误报告时失败；ON_WARNING 在存在告警或错误时失败。失败抛出 Assert.state 异常。",
+     "file": "F001",
+     "line": 139,
+     "condition": "策略 = ON_ERROR 或 ON_WARNING"
+    },
+    {
+     "from": "PropertiesMigrationListener",
+     "to": "SpringApplication",
+     "kind": "original",
+     "method": "logLegacyPropertiesReport",
+     "description": "启动失败触发 ApplicationFailedEvent，报告仍会被输出，便于定位是哪个旧键。",
+     "file": "F002",
+     "line": 60,
+     "async": true
+    }
+   ],
+   "files": [
+    "F001",
+    "F003",
+    "F004",
+    "F005",
+    "F006",
+    "F007"
+   ]
+  }
+ ]
+}

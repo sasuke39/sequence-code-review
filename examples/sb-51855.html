@@ -1,0 +1,134 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>spring-boot #51855 · 属性迁移器可让应用启动失败</title><style>:root{--bg:#f6f7f9;--surface:#fff;--ink:#1b2433;--muted:#667085;--line:#e4e7ec;--accent:#4f46e5;--accent-soft:#eef2ff;--side:#fff;--side-hover:#f2f4f7;
+--added:#12805c;--added-bg:#e6f6ee;--updated:#2f5fd0;--updated-bg:#e8effd;--deleted:#c0392b;--deleted-bg:#fdeceb;--original:#667085;--original-bg:#eef0f3;
+--cond-bg:#fff7e6;--cond-bar:#f0a020;--life:#d0d5dd;--actor-bg:#f2f4ff;--actor-line:#c7cdf5;--shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.04)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1420;--surface:#171e2d;--ink:#e6eaf2;--muted:#8d98ad;--line:#273046;--accent:#8b93ff;--accent-soft:#222a4a;--side:#131a28;--side-hover:#1d2638;
+--added:#4cd3a0;--added-bg:#12372b;--updated:#8fb0ff;--updated-bg:#1c2b52;--deleted:#ff8c80;--deleted-bg:#44201f;--original:#9aa5b8;--original-bg:#262e40;
+--cond-bg:#3a2f16;--life:#344058;--actor-bg:#1f2747;--actor-line:#3b4678;--shadow:0 1px 2px rgba(0,0,0,.3)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.65 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+aside{position:fixed;width:272px;inset:0 auto 0 0;padding:64px 14px 20px;overflow:auto;background:var(--side);border-right:1px solid var(--line);transition:width .2s}
+aside h2{margin:0 8px 6px;font-size:15px;font-weight:650;letter-spacing:.01em}
+main{margin-left:272px;padding:28px 32px 64px;min-width:0;transition:margin-left .2s}
+.sidebar-toggle{position:fixed;left:14px;top:14px;z-index:20;height:34px;padding:0 12px;font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);cursor:pointer}
+.nav-list{list-style:none;padding:0;margin:14px 0}.nav-list li{margin:2px 0}
+.nav-list a{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:8px;text-decoration:none;color:var(--muted);border-left:3px solid transparent;transition:background .12s,color .12s}
+.nav-list a:hover{background:var(--side-hover);color:var(--ink);text-decoration:none}
+.nav-list a.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)}
+.nav-number{flex:0 0 24px;font:600 12px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.75}.nav-label{line-height:1.5;font-weight:500}
+.sidebar-collapsed aside{width:72px;padding:64px 8px 12px}.sidebar-collapsed aside>h2,.sidebar-collapsed .nav-label{display:none}.sidebar-collapsed main{margin-left:72px}.sidebar-collapsed .nav-list a{justify-content:center;padding:9px 4px}
+.chain{background:var(--surface);padding:6px 24px 22px;margin-bottom:24px;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);scroll-margin-top:16px}
+summary{cursor:pointer;font-weight:650;font-size:17px;padding:16px 0;list-style:none;display:flex;align-items:center;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+details[open]>summary::after{transform:rotate(225deg)}
+.idx{font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:6px}
+.chain-description{margin:0 0 14px;color:var(--muted);line-height:1.8;max-width:78ch}
+.toolbar{display:flex;align-items:center;gap:8px;padding:0 0 12px}
+.toolbar .meta{margin-left:auto;color:var(--muted);font-size:12px}
+button{height:30px;padding:0 12px;font:inherit;font-size:13px;color:var(--ink);border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;transition:background .12s,border-color .12s}
+button:hover{background:var(--side-hover);border-color:var(--life)}
+.canvas{overflow:auto;max-height:85vh;border:1px solid var(--line);border-radius:12px;background:var(--bg);background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px}
+.canvas svg{display:block;max-width:none!important;font-size:14px;font-family:inherit}
+.canvas svg text{fill:var(--ink)}
+.life{stroke:var(--life);stroke-width:1.5;stroke-dasharray:4 6}
+.actor rect{fill:var(--actor-bg);stroke:var(--actor-line);stroke-width:1.2}
+.actor text{font-weight:650;font-size:14px}
+.msg{fill:none;stroke:var(--muted);stroke-width:1.6;stroke-linejoin:round}.msg.async{stroke-dasharray:6 5}
+.arrow-head{fill:var(--muted)}
+.canvas svg .desc{fill:var(--muted);font-size:13px}
+.num{fill:var(--accent)}.canvas svg .num-t{fill:#fff;font:700 11px ui-monospace,Menlo,monospace}
+.badge.original{fill:var(--original-bg)}.badge.added{fill:var(--added-bg)}.badge.updated{fill:var(--updated-bg)}.badge.deleted{fill:var(--deleted-bg)}
+.canvas svg .badge-t{font-size:12px;font-weight:650}
+.canvas svg .badge-t.original{fill:var(--original)}.canvas svg .badge-t.added{fill:var(--added)}.canvas svg .badge-t.updated{fill:var(--updated)}.canvas svg .badge-t.deleted{fill:var(--deleted)}
+.canvas svg .code-link{fill:var(--accent);font:600 14px ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer;text-decoration:none}
+.canvas svg .code-link:hover{text-decoration:underline}
+.cond-box{fill:none;stroke:var(--cond-bar);stroke-width:1.2;stroke-dasharray:5 4;opacity:.85}.cond-tab{fill:var(--cond-bar)}.canvas svg .cond text{font-size:12.5px;font-weight:600;fill:#4a3300}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.diagram-files{margin-top:16px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.diagram-files>summary{font-size:13px;font-weight:600;padding:11px 14px;background:var(--bg);color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:11px 14px;border-top:1px solid var(--line);vertical-align:top}
+tr:hover td{background:var(--bg)}
+td.fid{font:12px ui-monospace,Menlo,monospace;color:var(--muted);white-space:nowrap}
+small{display:block;overflow-wrap:anywhere;color:var(--muted);font-size:12px;margin-top:2px}
+.tag{display:inline-block;margin-right:8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.tag.original{color:var(--original);background:var(--original-bg)}.tag.added{color:var(--added);background:var(--added-bg)}.tag.updated{color:var(--updated);background:var(--updated-bg)}.tag.deleted{color:var(--deleted);background:var(--deleted-bg)}
+@media(max-width:800px){aside{position:static;width:auto;padding-top:60px;border:0}main{margin:0;padding:12px}.sidebar-collapsed aside{position:fixed;height:100vh}.sidebar-collapsed main{margin-left:72px}.chain{padding:2px 14px 16px}}
+</style><button class="sidebar-toggle" aria-expanded="true" aria-label="展开或收起目录">收起目录</button><aside><h2>spring-boot #51855 · 属性迁移器可让应用启动失败</h2><ol class="nav-list"><li><a href="#chain-fail-startup"><span class="nav-number">01</span><span class="nav-label">启动时按策略决定是否因待迁移配置而失败</span></a></li></ol></aside><main><details class="chain" id="chain-fail-startup" open><summary><span class="idx">01</span>启动时按策略决定是否因待迁移配置而失败</summary><p class="chain-description">应用升级后若配置里仍有旧键，原来只在启动完成后打印一份报告。此次在 ApplicationPreparedEvent 阶段读取 spring.properties.migrator.fail，生成迁移报告后立即校验，让团队可以在 CI 或预发中把「存在旧键」直接变成启动失败，默认 never 保持原有行为。</p><div class="toolbar"><button onclick="fit(this)">适应宽度</button><button onclick="zoom(this,.15)" aria-label="放大">＋</button><button onclick="zoom(this,-.15)" aria-label="缩小">－</button><span class="meta">5 步 · 7 个文件</span></div><div class="canvas"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 923" role="img" aria-label="启动时按策略决定是否因待迁移配置而失败"><defs><marker id="arrow-fail-startup" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto"><path class="arrow-head" d="M1,1 L10,5 L1,9 z"/></marker></defs><line class="life" x1="120.0" y1="64" x2="120.0" y2="907"/><g class="actor"><rect x="27.75" y="20" width="184.5" height="44" rx="10"/><text x="120.0" y="47" text-anchor="middle">SpringApplication</text></g><line class="life" x1="413.3333333333333" y1="64" x2="413.3333333333333" y2="907"/><g class="actor"><rect x="278.5833333333333" y="20" width="269.5" height="44" rx="10"/><text x="413.3333333333333" y="47" text-anchor="middle">PropertiesMigrationListener</text></g><line class="life" x1="706.6666666666666" y1="64" x2="706.6666666666666" y2="907"/><g class="actor"><rect x="631.6666666666666" y="20" width="150" height="44" rx="10"/><text x="706.6666666666666" y="47" text-anchor="middle">Binder</text></g><line class="life" x1="1000.0" y1="64" x2="1000.0" y2="907"/><g class="actor"><rect x="925.0" y="20" width="150" height="44" rx="10"/><text x="1000.0" y="47" text-anchor="middle">Fail 策略</text></g><g class="step"><circle class="num" cx="28" cy="115" r="11"/><text class="num-t" x="28" y="119" text-anchor="middle">1</text><rect class="badge original" x="168.86666666666662" y="101" width="40" height="24" rx="12"/><text class="badge-t original" x="188.86666666666662" y="117" text-anchor="middle">原有</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListener.java&amp;line=60"><text class="code-link" x="216.86666666666662" y="118">onApplicationEvent</text></a><text class="desc" x="266.66666666666663" y="144" text-anchor="middle">Environment 准备完毕后发布</text><text class="desc" x="266.66666666666663" y="165" text-anchor="middle">ApplicationPreparedEvent，监听器</text><text class="desc" x="266.66666666666663" y="186" text-anchor="middle">收到后进入迁移检查。</text><path class="msg" d="M 120.0 221 H 413.3333333333333" marker-end="url(#arrow-fail-startup)"/></g><g class="step"><circle class="num" cx="28" cy="278" r="11"/><text class="num-t" x="28" y="282" text-anchor="middle">2</text><rect class="badge updated" x="384.30000000000007" y="264" width="40" height="24" rx="12"/><text class="badge-t updated" x="404.30000000000007" y="280" text-anchor="middle">更新</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListener.java&amp;line=71"><text class="code-link" x="432.30000000000007" y="281">bind(spring.properties.migrator.fail)</text></a><text class="desc" x="560.0" y="307" text-anchor="middle">从 Environment 绑定失败策略；未配</text><text class="desc" x="560.0" y="328" text-anchor="middle">置时回落到 NEVER，因此老用户无感知。</text><path class="msg" d="M 413.3333333333333 363 H 706.6666666666666" marker-end="url(#arrow-fail-startup)"/></g><g class="step"><circle class="num" cx="28" cy="420" r="11"/><text class="num-t" x="28" y="424" text-anchor="middle">3</text><rect class="badge updated" x="461.3333333333333" y="406" width="40" height="24" rx="12"/><text class="badge-t updated" x="481.3333333333333" y="422" text-anchor="middle">更新</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListener.java&amp;line=72"><text class="code-link" x="509.3333333333333" y="423">getReport</text></a><text class="desc" x="461.3333333333333" y="449">先加载 spring-configuration-metadata.json，再生成</text><text class="desc" x="461.3333333333333" y="470">包含告警（改名键）和错误（不支持键）的报告并保存，用</text><text class="desc" x="461.3333333333333" y="491">于之后失败时仍能打印。</text><path class="msg" d="M 413.3333333333333 433 h 34 v 85 h -34" marker-end="url(#arrow-fail-startup)"/></g><g class="cond"><rect class="cond-box" x="357.3333333333333" y="570" width="698.6666666666667" height="150" rx="10"/><rect class="cond-tab" x="369.3333333333333" y="560" width="298.4999999999999" height="22" rx="6"/><text x="380.3333333333333" y="575">条件  策略 = ON_ERROR 或 ON_WARNING</text></g><g class="step"><circle class="num" cx="28" cy="613" r="11"/><text class="num-t" x="28" y="617" text-anchor="middle">4</text><rect class="badge added" x="662.1666666666666" y="599" width="40" height="24" rx="12"/><text class="badge-t added" x="682.1666666666666" y="615" text-anchor="middle">新增</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListener.java&amp;line=139"><text class="code-link" x="710.1666666666666" y="616">check</text></a><text class="desc" x="706.6666666666666" y="642" text-anchor="middle">NEVER 恒通过；ON_ERROR 在存在错误报告时失败；ON_WARNING 在存在告警或错误时</text><text class="desc" x="706.6666666666666" y="663" text-anchor="middle">失败。失败抛出 Assert.state 异常。</text><path class="msg" d="M 413.3333333333333 698 H 1000.0" marker-end="url(#arrow-fail-startup)"/></g><g class="step"><circle class="num" cx="28" cy="755" r="11"/><text class="num-t" x="28" y="759" text-anchor="middle">5</text><rect class="badge original" x="140.16666666666669" y="741" width="40" height="24" rx="12"/><text class="badge-t original" x="160.16666666666669" y="757" text-anchor="middle">原有</text><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListener.java&amp;line=60"><text class="code-link" x="188.16666666666669" y="758">logLegacyPropertiesReport</text></a><text class="desc" x="266.66666666666663" y="784" text-anchor="middle">启动失败触发</text><text class="desc" x="266.66666666666663" y="805" text-anchor="middle">ApplicationFailedEvent，报告仍会</text><text class="desc" x="266.66666666666663" y="826" text-anchor="middle">被输出，便于定位是哪个旧键。</text><path class="msg async" d="M 413.3333333333333 861 H 120.0" marker-end="url(#arrow-fail-startup)"/></g></svg></div><details class="diagram-files"><summary>本图全部文件（7）</summary><table><tr><td class="fid">F002</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListener.java&amp;line=69">PropertiesMigrationListener.java:69</a><small>/path/to/sb/core/spring-boot-properties-migrator/src/main/java/org/springframework/boot/context/properties/migrator/PropertiesMigrationListener.java</small></td><td><span class="tag updated">更新</span>准备阶段绑定 spring.properties.migrator.fail，生成报告后立即按策略校验</td></tr><tr><td class="fid">F001</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListener.java&amp;line=116">PropertiesMigrationListener.java:116</a><small>/path/to/sb/core/spring-boot-properties-migrator/src/main/java/org/springframework/boot/context/properties/migrator/PropertiesMigrationListener.java</small></td><td><span class="tag added">新增</span>新增 Fail 枚举（NEVER / ON_ERROR / ON_WARNING），每个取值带一个判断迁移报告是否算失败的谓词，check() 失败时抛 IllegalStateException</td></tr><tr><td class="fid">F003</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Fmain%2Fresources%2FMETA-INF%2Fspring-configuration-metadata.json&amp;line=3">spring-configuration-metadata.json:3</a><small>/path/to/sb/core/spring-boot-properties-migrator/src/main/resources/META-INF/spring-configuration-metadata.json</small></td><td><span class="tag added">新增</span>为新属性补充元数据，使 IDE 提示与 configprop 文档引用可用</td></tr><tr><td class="fid">F004</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2FbuildSrc%2Fsrc%2Fmain%2Fjava%2Forg%2Fspringframework%2Fboot%2Fbuild%2Fcontext%2Fproperties%2FDocumentConfigurationProperties.java&amp;line=109">DocumentConfigurationProperties.java:109</a><small>/path/to/sb/buildSrc/src/main/java/org/springframework/boot/build/context/properties/DocumentConfigurationProperties.java</small></td><td><span class="tag updated">更新</span>把 spring.properties 前缀加入配置属性文档生成</td></tr><tr><td class="fid">F005</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fdocumentation%2Fspring-boot-docs%2Fsrc%2Fdocs%2Fantora%2Fmodules%2FROOT%2Fpages%2Fupgrading.adoc&amp;line=52">upgrading.adoc:52</a><small>/path/to/sb/documentation/spring-boot-docs/src/docs/antora/modules/ROOT/pages/upgrading.adoc</small></td><td><span class="tag updated">更新</span>升级指南说明该属性的三种取值</td></tr><tr><td class="fid">F006</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fsrc%2Ftest%2Fjava%2Forg%2Fspringframework%2Fboot%2Fcontext%2Fproperties%2Fmigrator%2FPropertiesMigrationListenerTests.java&amp;line=62">PropertiesMigrationListenerTests.java:62</a><small>/path/to/sb/core/spring-boot-properties-migrator/src/test/java/org/springframework/boot/context/properties/migrator/PropertiesMigrationListenerTests.java</small></td><td><span class="tag updated">更新</span>覆盖 never / on-error / on-warning 在改名键与不支持键下的启停行为</td></tr><tr><td class="fid">F007</td><td><a href="idea://open?file=%2Fpath%2Fto%2Fsb%2Fcore%2Fspring-boot-properties-migrator%2Fbuild.gradle&amp;line=40">build.gradle:40</a><small>/path/to/sb/core/spring-boot-properties-migrator/build.gradle</small></td><td><span class="tag updated">更新</span>测试源码开启空值检查（nullability tests）</td></tr></table></details></details></main><script>function sizeDiagram(canvas, scale) {
+  const svg = canvas.querySelector('svg');
+  const box = svg.viewBox.baseVal;
+  svg.dataset.scale = scale;
+  svg.style.width = `${box.width * scale}px`;
+  svg.style.height = `${box.height * scale}px`;
+}
+function fitCanvas(canvas) {
+  if (!canvas.clientWidth) return;
+  canvas.dataset.fit = 'true';
+  sizeDiagram(canvas, canvas.clientWidth / canvas.querySelector('svg').viewBox.baseVal.width);
+}
+function fit(button) { fitCanvas(button.closest('.chain').querySelector('.canvas')); }
+function zoom(button, delta) {
+  const canvas = button.closest('.chain').querySelector('.canvas');
+  canvas.dataset.fit = 'false';
+  sizeDiagram(canvas, Math.max(.05, Math.min(4, Number(canvas.querySelector('svg').dataset.scale || 1) + delta)));
+}
+function filterFiles(query) {
+  document.querySelectorAll('#inventory tr[data-file]').forEach(row => row.hidden = !row.dataset.file.includes(query.toLowerCase()));
+}
+document.querySelectorAll('.canvas').forEach(canvas => {
+  canvas.style.cursor = 'grab';
+  let drag = null, suppressClick = false;
+  canvas.addEventListener('pointerdown', event => {
+    suppressClick = false;
+    // 代码链接交由浏览器处理，不能捕获其指针，否则IDEA跳转会被拖动逻辑吞掉。
+    if (event.target.closest('a, button, input, select, textarea')) return;
+    if (event.button !== 0 || event.pointerType === 'touch') return;
+    drag = {id:event.pointerId, x:event.clientX, y:event.clientY, left:canvas.scrollLeft, top:canvas.scrollTop, moved:false};
+  });
+  canvas.addEventListener('pointermove', event => {
+    if (!drag) return;
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+    drag.moved = true;
+    canvas.setPointerCapture(event.pointerId);
+    canvas.style.cursor = 'grabbing';
+    event.preventDefault();
+    canvas.scrollLeft = drag.left - dx;
+    canvas.scrollTop = drag.top - dy;
+  });
+  const stop = () => {
+    if (!drag) return;
+    suppressClick = drag.moved;
+    if (canvas.hasPointerCapture(drag.id)) canvas.releasePointerCapture(drag.id);
+    drag = null;
+    canvas.style.cursor = 'grab';
+  };
+  canvas.addEventListener('pointerup', stop);
+  canvas.addEventListener('pointercancel', stop);
+  canvas.addEventListener('pointerleave', () => { if (drag && !drag.moved) stop(); });
+  canvas.addEventListener('dragstart', event => event.preventDefault());
+  canvas.addEventListener('click', event => {
+    if (event.target.closest('a')) { suppressClick = false; return; }
+    if (suppressClick) { event.preventDefault(); event.stopPropagation(); suppressClick = false; }
+  }, true);
+  canvas.style.userSelect = 'none';
+  canvas.dataset.fit = 'true';
+  new ResizeObserver(() => { if (canvas.dataset.fit === 'true') fitCanvas(canvas); }).observe(canvas);
+  canvas.closest('.chain').addEventListener('toggle', () => {
+    if (canvas.dataset.fit === 'true') requestAnimationFrame(() => fitCanvas(canvas));
+  });
+  fitCanvas(canvas);
+});
+
+const sidebarToggle = document.querySelector('.sidebar-toggle');
+if (sidebarToggle) sidebarToggle.onclick = () => {
+  const collapsed = document.body.classList.toggle('sidebar-collapsed');
+  sidebarToggle.textContent = collapsed ? '☰' : '收起目录';
+  sidebarToggle.setAttribute('aria-expanded', String(!collapsed));
+};
+document.querySelectorAll('.nav-list a').forEach(a => a.addEventListener('click', () => {
+  const target = document.getElementById(a.getAttribute('href').slice(1));
+  if (target) target.open = true;
+  document.querySelectorAll('.nav-list a').forEach(link => link.classList.toggle('active', link === a));
+}));
+</script></html>

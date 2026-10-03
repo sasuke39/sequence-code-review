@@ -1,0 +1,58 @@
+{
+  "title": "示例需求审查",
+  "files": [
+    {
+      "id": "F001",
+      "path": "/example/project/OrderService.java",
+      "line": 32,
+      "kind": "updated",
+      "description": "增加外部订单数量计算",
+      "changed": true
+    },
+    {
+      "id": "F002",
+      "path": "/example/project/OrderMapper.xml",
+      "line": 18,
+      "kind": "updated",
+      "description": "保存数量和单价",
+      "changed": true
+    }
+  ],
+  "chains": [
+    {
+      "id": "orders",
+      "title": "订单创建链路",
+      "participants": [
+        "订单消费者",
+        "订单服务",
+        "数据库"
+      ],
+      "steps": [
+        {
+          "from": "订单消费者",
+          "to": "订单服务",
+          "kind": "updated",
+          "method": "createOrder",
+          "description": "识别订单类型；外部订单按实际购买SKU计算数量。",
+          "condition": "外部订单分支（示例，实际枚举需核实）",
+          "file": "F001",
+          "line": 32
+        },
+        {
+          "from": "订单服务",
+          "to": "数据库",
+          "kind": "updated",
+          "method": "saveOrder",
+          "description": "保存商品数量与单价，供后续下发使用。",
+          "file": "F002",
+          "line": 18
+        }
+      ],
+      "files": [
+        "F001",
+        "F002"
+      ],
+      "description": "接收订单创建请求，根据订单实际购买SKU计算数量并保存，供后续交易下发使用；此图展示新增字段如何进入原链路。"
+    }
+  ]
+}

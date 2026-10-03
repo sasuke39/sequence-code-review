@@ -1,0 +1,155 @@
+{
+ "title": "nacos #15867 · SecurityProxy 关闭时注销订阅者",
+ "files": [
+  {
+   "id": "H001",
+   "path": "/path/to/nacos/client/src/main/java/com/alibaba/nacos/client/security/SecurityProxy.java",
+   "line": 51,
+   "kind": "added",
+   "description": "持有 ServerListChangeEvent 订阅者的引用，使其可被注销",
+   "changed": true
+  },
+  {
+   "id": "H002",
+   "path": "/path/to/nacos/client/src/main/java/com/alibaba/nacos/client/security/SecurityProxy.java",
+   "line": 75,
+   "kind": "updated",
+   "description": "构造时用字段持有的订阅者注册到 NotifyCenter",
+   "changed": true
+  },
+  {
+   "id": "H003",
+   "path": "/path/to/nacos/client/src/main/java/com/alibaba/nacos/client/security/SecurityProxy.java",
+   "line": 113,
+   "kind": "updated",
+   "description": "shutdown 先注销订阅者，再关闭认证插件",
+   "changed": true
+  },
+  {
+   "id": "H004",
+   "path": "/path/to/nacos/client/src/main/java/com/alibaba/nacos/client/lock/NacosLockService.java",
+   "line": 155,
+   "kind": "updated",
+   "description": "锁服务关闭时补上 securityProxy.shutdown()",
+   "changed": true
+  },
+  {
+   "id": "H005",
+   "path": "/path/to/nacos/client/src/main/java/com/alibaba/nacos/client/naming/NacosNamingMaintainService.java",
+   "line": 210,
+   "kind": "updated",
+   "description": "命名运维服务关闭时补上 securityProxy.shutdown()",
+   "changed": true
+  },
+  {
+   "id": "H006",
+   "path": "/path/to/nacos/client-basic/src/main/java/com/alibaba/nacos/client/address/AbstractServerListManager.java",
+   "line": 65,
+   "kind": "updated",
+   "description": "服务列表 Provider 已关闭（为 null）时返回空列表，避免关闭后被回调触发 NPE",
+   "changed": true
+  },
+  {
+   "id": "H007",
+   "path": "/path/to/nacos/client/src/test/java/com/alibaba/nacos/client/security/SecurityProxyTest.java",
+   "line": 211,
+   "kind": "added",
+   "description": "验证 shutdown 后订阅者已注销",
+   "changed": true
+  },
+  {
+   "id": "H008",
+   "path": "/path/to/nacos/client/src/test/java/com/alibaba/nacos/client/lock/NacosLockServiceTest.java",
+   "line": 84,
+   "kind": "added",
+   "description": "验证锁服务 shutdown 注销订阅者",
+   "changed": true
+  },
+  {
+   "id": "H009",
+   "path": "/path/to/nacos/client/src/test/java/com/alibaba/nacos/client/naming/NacosNamingMaintainServiceTest.java",
+   "line": 70,
+   "kind": "updated",
+   "description": "mock 的 SecurityProxy 参与关闭流程校验",
+   "changed": true
+  },
+  {
+   "id": "H010",
+   "path": "/path/to/nacos/client-basic/src/test/java/com/alibaba/nacos/client/address/AbstractServerListManagerTest.java",
+   "line": 97,
+   "kind": "added",
+   "description": "验证关闭后 getServerList 返回空列表",
+   "changed": true
+  }
+ ],
+ "chains": [
+  {
+   "id": "shutdown-leak",
+   "title": "客户端关闭：注销服务列表变更订阅，避免泄漏与关闭后回调",
+   "description": "SecurityProxy 每创建一次就向全局 NotifyCenter 注册一个匿名订阅者，却从不注销，反复创建/关闭 Nacos 客户端会累积订阅者并持有已关闭的对象。此次让 SecurityProxy 保存订阅者并在 shutdown 注销，同时在锁服务与命名运维服务关闭流程里补上漏掉的 securityProxy.shutdown()，并让已关闭的服务列表管理器安全返回空列表。",
+   "participants": [
+    "NacosLockService / MaintainService",
+    "SecurityProxy",
+    "NotifyCenter",
+    "ServerListManager"
+   ],
+   "steps": [
+    {
+     "from": "NacosLockService / MaintainService",
+     "to": "ServerListManager",
+     "kind": "original",
+     "method": "shutdown",
+     "description": "先关闭服务列表管理器，停止其 Provider。",
+     "file": "H004",
+     "line": 154
+    },
+    {
+     "from": "NacosLockService / MaintainService",
+     "to": "SecurityProxy",
+     "kind": "updated",
+     "method": "shutdown",
+     "description": "以前这两个服务不关闭 SecurityProxy，其订阅与认证插件一直残留；现在补上调用。",
+     "file": "H004",
+     "line": 155
+    },
+    {
+     "from": "SecurityProxy",
+     "to": "NotifyCenter",
+     "kind": "updated",
+     "method": "deregisterSubscriber",
+     "description": "注销构造时注册的 ServerListChangeEvent 订阅者，之后服务列表变化不再回调该实例。",
+     "file": "H003",
+     "line": 113
+    },
+    {
+     "from": "SecurityProxy",
+     "to": "SecurityProxy",
+     "kind": "original",
+     "method": "clientAuthPluginManager.shutdown",
+     "description": "释放认证插件资源。",
+     "file": "H003",
+     "line": 114
+    },
+    {
+     "from": "NotifyCenter",
+     "to": "ServerListManager",
+     "kind": "updated",
+     "method": "getServerList",
+     "description": "Provider 已关闭时返回空列表而不是抛空指针，保证关闭竞态下的事件回调安全。",
+     "file": "H006",
+     "line": 65,
+     "condition": "Provider 为 null（已 shutdown）"
+    }
+   ],
+   "files": [
+    "H001",
+    "H002",
+    "H005",
+    "H007",
+    "H008",
+    "H009",
+    "H010"
+   ]
+  }
+ ]
+}
