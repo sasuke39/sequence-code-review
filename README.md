@@ -24,7 +24,7 @@ Code Review 不再从文件列表第一行开始读，而是先看懂「原链�
 作为 Codex / Claude Code skill 使用：
 
 ```bash
-git clone https://github.com/<you>/sequence-code-review ~/.codex/skills/sequence-code-review
+git clone https://github.com/sasuke39/sequence-code-review ~/.codex/skills/sequence-code-review
 ```
 
 然后对 Agent 说：
